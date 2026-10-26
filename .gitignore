@@ -1,0 +1,8 @@
+**/bin/
+**/obj/
+*.user
+*.suo
+settings.ini
+*.pfx
+*.p12
+*.key
