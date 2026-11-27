@@ -2,74 +2,76 @@
 
 ## Источник истины по SDK
 
-В репозитории сохранена локальная поставка CryptoPro SDK в `docs/pki_sdk_docs/`:
+Локальная поставка CryptoPro SDK находится в `docs/pki_sdk_docs/`:
 
 - `cades.chm`
 - `CpPkiSdk.chm`
 - `pkivalidator.chm`
 - `cadessdk_2.0.15273.msi`
 
-Все новые вызовы, структуры, параметры и правила освобождения памяти необходимо сверять с этой поставкой. Если документация SDK и пример из Интернета расходятся, приоритет у документации поставленной версии. При реализации фиксировать версию SDK/runtime и точные разделы CHM, на основании которых выбран API.
+Точные сигнатуры, структуры, параметры и ownership памяти сверяются с этой поставкой и заголовками, которые использует MSVC build. Официальная актуальная документация полезна как навигация, но не заменяет проверку конкретного SDK 2.0.15273.
 
 ## Выбранный API
 
-Текущая версия использует simplified C API из `cades.h`, а не Browser plug-in и не COM Automation.
+Текущая версия использует simplified C API из `cades.h`, не COM Automation и не Browser plug-in.
 
 | Операция | Функция |
 |---|---|
-| Detached/attached signing (текущий BES) | `CadesSignMessage` |
+| Attached/detached BES signing | `CadesSignMessage` |
+| Повышение выбранного signer | `CadesEnhanceMessage` |
+| Повышение всех signer | `CadesEnhanceMessageAll` |
 | Attached verification | `CadesVerifyMessage` |
 | Detached verification | `CadesVerifyDetachedMessage` |
-| Освобождение результата подписи | `CadesFreeBlob` |
+| Проверка типа по атрибутам | `CadesMsgIsType` / `CadesMsgIsTypeEncoded` |
+| Освобождение blob | `CadesFreeBlob` |
 | Освобождение verification info | `CadesFreeVerificationInfo` |
-| Освобождение decoded content | `CadesFreeBlob` |
 
-## Текущий статус профилей
+## Текущий BES pipeline
 
-| Профиль | Статус |
-|---|---|
-| CAdES-BES | В исходниках есть attached/detached вызовы; сборка и испытания не подтверждены |
-| CAdES-T | Не реализован |
-| CAdES-X Long Type 1 | Не реализован |
+В текущем коде используются:
 
-Подробные требования и критерии приёмки: [CADES_PROFILES.md](CADES_PROFILES.md).
+- `CRYPT_SIGN_MESSAGE_PARA`;
+- `CADES_SIGN_PARA` с `dwCadesType = CADES_BES`;
+- `CADES_SIGN_MESSAGE_PARA`;
+- `CadesSignMessage`.
 
-## Текущие структуры BES
+Для attached/detached различается флаг detached, передаваемый в `CadesSignMessage`.
 
-Используемые структуры из `cades.h`:
+## Enhancement pipeline: T и X Long Type 1
 
-- `CRYPT_SIGN_MESSAGE_PARA`: encoding, signer certificate, hash algorithm OID.
-- `CADES_SIGN_PARA`: `dwCadesType = CADES_BES`, signer certificate, hash OID.
-- `CADES_SIGN_MESSAGE_PARA`: связывает CryptoAPI signing parameters с CAdES parameters.
+SDK официально демонстрирует повышение BES до X Long Type 1 через simplified C API:
 
-Текущий вызов:
+- `CADES_SERVICE_CONNECTION_PARA` содержит параметры подключения к TSP;
+- `CADES_SIGN_PARA.dwCadesType` задаёт целевой профиль;
+- `CADES_ENHANCE_MESSAGE_PARA` связывает ASN.1 encoding и `CADES_SIGN_PARA`;
+- `CadesEnhanceMessage` обрабатывает выбранного signer;
+- `CadesEnhanceMessageAll` может использоваться для всех signer.
 
-```cpp
-CadesSignMessage(
-    &para,
-    fDetachedSignature,
-    1,
-    rgpbToBeSigned,
-    rgcbToBeSigned,
-    &pSignedBlob);
-```
+Для CAdES-T задаётся `CADES_T`, для X Long Type 1 — `CADES_X_LONG_TYPE_1`. Проектный pipeline: создать BES через `CadesSignMessage`, затем повысить результат. Это позволяет не подписывать исходный документ закрытым ключом повторно.
 
-Флаг `fDetachedSignature=TRUE` создаёт detached подпись; `FALSE` включает содержимое в signed message.
+Официальный C++ пример: [Enhance CAdES-BES to X Long Type 1](https://docs.cryptopro.ru/cades/reference/cadesc/cadesc-samples/samplesimplifiedapienhancecadesbes).
 
-## Реализация CAdES-T и X Long Type 1
+## Проверка профиля
 
-Не предполагать, что для этих профилей достаточно поменять `dwCadesType`. Необходимо:
+`CADES_VERIFICATION_PARA.dwCadesType` задаёт ожидаемый профиль:
 
-1. Найти в локальных CHM точные разделы, описывающие создание и проверку каждого профиля.
-2. Установить, используются ли отдельные функции upgrade/enhance, параметры TSA/TSP, OCSP/CRL и validation data.
-3. Проверить ограничения версии SDK и runtime.
-4. Зафиксировать сигнатуры, обязательные поля структур, владение памятью и коды ошибок в отдельной таблице реализации.
-5. Реализовать только документированный SDK workflow.
-6. Проверять созданную подпись тем же SDK и независимым валидатором.
+- `CADES_BES`;
+- `CADES_T`;
+- `CADES_X_LONG_TYPE_1`.
+
+`CadesMsgIsType` / `CadesMsgIsTypeEncoded` проверяют только наличие профильных атрибутов и не заменяют криптографическую проверку. X Long Type 1 является частным случаем BES, поэтому успешная проверка типа BES не доказывает соответствие X Long Type 1.
+
+Для X Long Type 1 SDK использует встроенные в подпись доказательства для проверки внутренней временной метки и цепочки; дополнительное хранилище в параметрах проверки применяется для внешнего timestamp.
+
+## Важные параметры
+
+`CADES_SIGN_PARA` содержит TSP connection, proxy, additional certificate store и дополнительные OCSP endpoint. В поставленной версии SDK поля дополнительных OCSP endpoint должны быть доступны (добавлены начиная с 2.00.13126), но компиляция всё равно должна подтвердить ABI и макросы заголовка.
+
+Для серверных сценариев проверить `CADES_SKIP_IE_PROXY_CONFIGURATION` и условную доступность `dwFlags` через `CADES_PARA_HAS_EXTRA_FIELDS`. Не включать флаги, которых нет в фактически используемом заголовке.
 
 ## Hash OID mapping
 
-Текущая реализация сопоставляет OID открытого ключа сертификата с хеш-OID:
+Текущая реализация сопоставляет OID открытого ключа сертификата с hash OID:
 
 | Public key OID | Hash OID | Семейство |
 |---|---|---|
@@ -77,13 +79,11 @@ CadesSignMessage(
 | `1.2.643.7.1.1.1.1` | `1.2.643.7.1.1.2.2` | GOST R 34.10-2012-256 / GOST R 34.11-2012-256 |
 | `1.2.643.7.1.1.1.2` | `1.2.643.7.1.1.2.3` | GOST R 34.10-2012-512 / GOST R 34.11-2012-512 |
 
-Это ограничение первой версии. Набор алгоритмов должен быть согласован с политикой организации, сертификатом и установленной версией CSP/SDK.
+Это ограничение первой версии. Набор алгоритмов должен быть согласован с сертификатом, политикой организации и установленной версией CSP/SDK.
 
-## Проверка и trust report
+## VerificationReport
 
-Текущая реализация использует `CadesVerifyMessage` и `CadesVerifyDetachedMessage`, проверяя `CADES_VERIFY_SUCCESS`. Это нельзя считать полной независимой проверкой всех политик доверия без подтверждения параметров SDK.
-
-В production VerificationReport должен раздельно фиксировать:
+Проверка должна раздельно фиксировать:
 
 1. криптографическую целостность подписи и данных;
 2. соответствие CAdES профилю;
@@ -94,11 +94,11 @@ CadesSignMessage(
 7. долгосрочные validation evidence для X Long Type 1;
 8. соответствие политике принимающей системы.
 
-Статусы должны включать как минимум `valid`, `invalid`, `unknown`, `not_checked`, `not_applicable`. Недоступность OCSP/TSA не равна положительному результату проверки.
+Использовать статусы `valid`, `invalid`, `unknown`, `not_checked`, `not_applicable`. Недоступность OCSP/TSA не равна положительному результату.
 
 ## Владение памятью
 
-- Blob, возвращённый CAdES API, освобождается соответствующей функцией SDK, например `CadesFreeBlob`.
-- `CADES_VERIFICATION_INFO` освобождается `CadesFreeVerificationInfo`.
-- Не использовать `free`, `delete[]` или `LocalFree` для памяти, выделенной SDK.
+- Blob, возвращённый CAdES API, освобождается через `CadesFreeBlob`.
+- `CADES_VERIFICATION_INFO` освобождается через `CadesFreeVerificationInfo`.
+- Не использовать `free`, `delete[]` или `LocalFree` для памяти SDK.
 - Для новых функций проверить ownership каждого выходного объекта в локальном CHM.
