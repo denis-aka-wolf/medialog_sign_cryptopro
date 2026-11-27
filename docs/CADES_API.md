@@ -1,19 +1,40 @@
 # Решения по CAdES API
 
+## Источник истины по SDK
+
+В репозитории сохранена локальная поставка CryptoPro SDK в `docs/pki_sdk_docs/`:
+
+- `cades.chm`
+- `CpPkiSdk.chm`
+- `pkivalidator.chm`
+- `cadessdk_2.0.15273.msi`
+
+Все новые вызовы, структуры, параметры и правила освобождения памяти необходимо сверять с этой поставкой. Если документация SDK и пример из Интернета расходятся, приоритет у документации поставленной версии. При реализации фиксировать версию SDK/runtime и точные разделы CHM, на основании которых выбран API.
+
 ## Выбранный API
 
 Текущая версия использует simplified C API из `cades.h`, а не Browser plug-in и не COM Automation.
 
 | Операция | Функция |
 |---|---|
-| Detached/attached signing | `CadesSignMessage` |
+| Detached/attached signing (текущий BES) | `CadesSignMessage` |
 | Attached verification | `CadesVerifyMessage` |
 | Detached verification | `CadesVerifyDetachedMessage` |
 | Освобождение результата подписи | `CadesFreeBlob` |
 | Освобождение verification info | `CadesFreeVerificationInfo` |
 | Освобождение decoded content | `CadesFreeBlob` |
 
-## Подписание
+## Текущий статус профилей
+
+| Профиль | Статус |
+|---|---|
+| CAdES-BES | В исходниках есть attached/detached вызовы; сборка и испытания не подтверждены |
+| CAdES-T | Не реализован |
+| CAdES-X Long Type 1 | Не реализован |
+
+Подробные требования и критерии приёмки: [CADES_PROFILES.md](CADES_PROFILES.md).
+
+## Текущие структуры BES
 
 Используемые структуры из `cades.h`:
 
@@ -21,7 +42,7 @@
 - `CADES_SIGN_PARA`: `dwCadesType = CADES_BES`, signer certificate, hash OID.
 - `CADES_SIGN_MESSAGE_PARA`: связывает CryptoAPI signing parameters с CAdES parameters.
 
-Функция:
+Текущий вызов:
 
 ```cpp
 CadesSignMessage(
@@ -33,9 +54,20 @@ CadesSignMessage(
     &pSignedBlob);
 ```
 
-Флаг `fDetachedSignature=TRUE` создаёт detached подпись; `FALSE` включает содержимое в signed message. Содержимое передаётся как один буфер.
+Флаг `fDetachedSignature=TRUE` создаёт detached подпись; `FALSE` включает содержимое в signed message.
 
-### Hash OID mapping
+## Реализация CAdES-T и X Long Type 1
+
+Не предполагать, что для этих профилей достаточно поменять `dwCadesType`. Необходимо:
+
+1. Найти в локальных CHM точные разделы, описывающие создание и проверку каждого профиля.
+2. Установить, используются ли отдельные функции upgrade/enhance, параметры TSA/TSP, OCSP/CRL и validation data.
+3. Проверить ограничения версии SDK и runtime.
+4. Зафиксировать сигнатуры, обязательные поля структур, владение памятью и коды ошибок в отдельной таблице реализации.
+5. Реализовать только документированный SDK workflow.
+6. Проверять созданную подпись тем же SDK и независимым валидатором.
+
+## Hash OID mapping
 
 Текущая реализация сопоставляет OID открытого ключа сертификата с хеш-OID:
 
@@ -45,66 +77,28 @@ CadesSignMessage(
 | `1.2.643.7.1.1.1.1` | `1.2.643.7.1.1.2.2` | GOST R 34.10-2012-256 / GOST R 34.11-2012-256 |
 | `1.2.643.7.1.1.1.2` | `1.2.643.7.1.1.2.3` | GOST R 34.10-2012-512 / GOST R 34.11-2012-512 |
 
-Это явное ограничение первой версии. До использования необходимо сверить OID с политикой организации, сертификатом и установленной версией CSP. Неизвестный OID приводит к `UNSUPPORTED_KEY_ALGORITHM`.
+Это ограничение первой версии. Набор алгоритмов должен быть согласован с политикой организации, сертификатом и установленной версией CSP/SDK.
 
-## Проверка
+## Проверка и trust report
 
-Для attached:
+Текущая реализация использует `CadesVerifyMessage` и `CadesVerifyDetachedMessage`, проверяя `CADES_VERIFY_SUCCESS`. Это нельзя считать полной независимой проверкой всех политик доверия без подтверждения параметров SDK.
 
-```cpp
-CadesVerifyMessage(&verifyPara, signerIndex, signedBlob,
-                   signedBlobSize, &decodedContent, &verificationInfo);
-```
+В production VerificationReport должен раздельно фиксировать:
 
-Для detached:
+1. криптографическую целостность подписи и данных;
+2. соответствие CAdES профилю;
+3. срок действия сертификата на релевантный момент;
+4. построение цепочки до доверенного корня;
+5. статус отзыва OCSP/CRL;
+6. timestamp/TSA и доверие к TSA;
+7. долгосрочные validation evidence для X Long Type 1;
+8. соответствие политике принимающей системы.
 
-```cpp
-CadesVerifyDetachedMessage(&verifyPara, signerIndex,
-    detachedSignature, detachedSignatureSize,
-    contentCount, contentBuffers, contentSizes,
-    &verificationInfo);
-```
-
-Текущая реализация проверяет signer index 0. В `CADES_VERIFICATION_PARA` задаёт `dwCadesType = CADES_BES`.
-
-`valid` считается true только если API вернул TRUE и `verificationInfo->dwStatus == CADES_VERIFY_SUCCESS`. При неуспехе возвращается числовой `statusCode` и текстовое имя статуса, если статус известен.
-
-## Статусы
-
-В `cades.h` присутствуют, среди прочего:
-
-- `CADES_VERIFY_SUCCESS`
-- `CADES_VERIFY_BAD_SIGNATURE`
-- `CADES_VERIFY_NO_CHAIN`
-- `CADES_VERIFY_END_CERT_REVOCATION`
-- `CADES_VERIFY_CHAIN_CERT_REVOCATION`
-- `CADES_VERIFY_NO_VALID_SIGNATURE_TIMESTAMP`
-- `CADES_VERIFY_NO_VALID_CADES_C_TIMESTAMP`
-- `CADES_VERIFY_NO_VALID_ARCHIVE_TIMESTAMP`
-- `CADES_VERIFY_UNSUPPORTED_ATTRIBUTE`
-- `CADES_VERIFY_FAILED_POLICY`
-
-Их точную семантику и зависимость от настроек SDK необходимо сверять с `cades.chm` именно той версии, которая установлена на целевой машине.
+Статусы должны включать как минимум `valid`, `invalid`, `unknown`, `not_checked`, `not_applicable`. Недоступность OCSP/TSA не равна положительному результату проверки.
 
 ## Владение памятью
 
-- Blob, возвращённый `CadesSignMessage` или `CadesVerifyMessage`, освобождается `CadesFreeBlob`.
+- Blob, возвращённый CAdES API, освобождается соответствующей функцией SDK, например `CadesFreeBlob`.
 - `CADES_VERIFICATION_INFO` освобождается `CadesFreeVerificationInfo`.
-- Не использовать `free`, `delete[]` или `LocalFree` для памяти, выделенной CAdES SDK.
-- Вызов освобождения выполняется и при ошибке последующей записи файла.
-
-## Важное различие: подпись и доверие
-
-Результат проверки CAdES зависит от параметров SDK и его политики. Нельзя сводить в UI все проверки к одной фразе «сертификат действителен».
-
-Раздельно фиксировать:
-
-1. криптографическая целостность подписи и данных;
-2. наличие и корректность атрибутов CAdES;
-3. срок действия сертификата на соответствующий момент;
-4. построение цепочки до доверенного корня;
-5. статус отзыва (OCSP/CRL);
-6. проверка timestamp/TSP и доверия к TSA;
-7. соответствие профилю и политике принимающей системы.
-
-Для первой версии Bridge не публикует независимый детальный trust report. Это отдельная задача на базе PKI SDK/PKI Validator и параметров CAdES verification.
+- Не использовать `free`, `delete[]` или `LocalFree` для памяти, выделенной SDK.
+- Для новых функций проверить ownership каждого выходного объекта в локальном CHM.
