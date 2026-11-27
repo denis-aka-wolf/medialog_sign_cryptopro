@@ -1,21 +1,48 @@
 # Документация Medialog Sign CryptoPro
 
+Документация рассчитана на открытие как vault/папки в Obsidian. Основные архитектурные документы используют Mermaid.
+
+## Архитектура и проектирование
+
 | Документ | Содержание |
 |---|---|
-| [Архитектура](ARCHITECTURE.md) | Компоненты, процессы, границы ответственности и поток данных |
-| [Инвентаризация SDK](SDK_INVENTORY.md) | Подтверждённые файлы SDK и примеры |
-| [Решения по CAdES API](CADES_API.md) | Используемые функции, структуры, профили и память |
-| [JSON-протокол](BRIDGE_PROTOCOL.md) | Команды, поля, ответы и ошибки |
-| [Сборка и установка](BUILD_AND_INSTALL.md) | Visual Studio, CMake, Flutter, развёртывание |
-| [Безопасность](SECURITY.md) | Ключи, PIN, хранилища, права, логи и угрозы |
-| [Тестирование](TESTING.md) | Функциональные, негативные и интеграционные тесты |
-| [Windows Server](WINDOWS_SERVER.md) | RDP, пользовательская сессия, ограничения службы |
-| [Ограничения и roadmap](ROADMAP.md) | Что реализовано, что нужно для production |
-| [Матрица совместимости](COMPATIBILITY_MATRIX.md) | Целевые платформы и release manifest |
-| [Release checklist](RELEASE_CHECKLIST.md) | Контрольный список перед выпуском |
-| [Changelog](CHANGELOG.md) | История версий |
-| [Диагностика](TROUBLESHOOTING.md) | Частые ошибки сборки и запуска |
+| [[ARCHITECTURE]] | Целевая архитектура единого Signing Service, Desktop localhost и Server HTTPS, Mermaid диаграммы |
+| [[ROADMAP]] | План от текущего Bridge до промышленного релиза |
+| [[CADES_PROFILES]] | Обязательные профили CAdES-BES, CAdES-T и CAdES-X Long Type 1 |
+| [[BRIDGE_PROTOCOL]] | Текущий JSON-протокол Native Bridge |
+| [[CADES_API]] | Используемый CAdES C API, структуры, память и статусы |
+| [[SDK_INVENTORY]] | Инвентаризация CryptoPro SDK и локальной документации |
 
-## Статус
+## Реализация, безопасность и эксплуатация
 
-Документация описывает исходную реализацию 0.1.0 и одновременно выделяет непроверенные пункты. Статус «реализовано в исходниках» не равен «собрано», «протестировано» или «допущено в production».
+| Документ | Содержание |
+|---|---|
+| [[BUILD_AND_INSTALL]] | Сборка, prerequisites и установка |
+| [[SECURITY]] | Ключи, PIN, хранилища, права и угрозы |
+| [[TESTING]] | Функциональные, негативные и интеграционные тесты |
+| [[WINDOWS_SERVER]] | Windows Server, service identity, Session 0 и удалённый доступ |
+| [[COMPATIBILITY_MATRIX]] | Платформы, CSP/SDK и release manifest |
+| [[RELEASE_CHECKLIST]] | Контрольный список выпуска |
+| [[TROUBLESHOOTING]] | Диагностика |
+| [[CHANGELOG]] | История изменений |
+
+## SDK reference package
+
+Оригинальная документация и поставка SDK находятся в [[pki_sdk_docs/|docs/pki_sdk_docs]]:
+
+- `cades.chm` — CAdES SDK API reference.
+- `CpPkiSdk.chm` — PKI SDK API reference.
+- `pkivalidator.chm` — PKI Validator API reference.
+- `cadessdk_2.0.15273.msi` — сохранённый дистрибутив SDK.
+
+Для точных сигнатур, структур, параметров и ownership памяти приоритет имеет именно эта локальная поставка SDK, а не примеры из других версий.
+
+## Статус документации
+
+Документы различают:
+- реализовано в исходниках;
+- собрано;
+- проверено на конкретной конфигурации;
+- принято для production.
+
+Нельзя считать функцию production-ready только на основании наличия вызова API в исходниках.
