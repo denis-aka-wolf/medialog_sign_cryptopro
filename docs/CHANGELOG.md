@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased - CAdES implementation specification
+
+- Добавлена техническая спецификация CAdES C API: BES signing, enhancement до T/X Long Type 1, verification и управление памятью.
+- Зафиксирован pipeline BES → T/X Long Type 1 через `CadesEnhanceMessage`.
+- Добавлены требования к TSP, OCSP, CRL, лицензиям и серверному security context.
+- Roadmap дополнен отдельным этапом реализации и проверки всех профилей.
+- Уточнено, что CAdES-X Long Type 1 не является CAdES-A.
+
 ## Unreleased - target architecture and production roadmap
 
 - Зафиксирована концепция единого CryptoPro Signing Service API для Desktop (loopback) и Server-side (HTTPS).
