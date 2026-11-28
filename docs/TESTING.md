@@ -21,12 +21,22 @@
 | S-003 | Неверный thumbprint | `CERTIFICATE_NOT_FOUND` |
 | S-004 | Закрытый ключ недоступен | Понятная ошибка CSP/key provider, процесс не падает |
 | S-005 | Неподдержанный OID | `UNSUPPORTED_KEY_ALGORITHM` |
+| S-006 | Detached CAdES-T | Создан BES → T, есть signature timestamp, independent validator accepts |
+| S-007 | Attached CAdES-T | Создан attached T artifact и проходит проверку |
+| S-008 | Detached CAdES-X Long Type 1 | Создан X Long Type 1 с validation evidence; независимый валидатор принимает |
+| S-009 | Attached CAdES-X Long Type 1 | Создан attached X Long Type 1 artifact |
+| S-010 | Некорректный TSP URL | `INVALID_TSP_URL` до начала криптографической операции |
+| S-011 | TSP недоступен/ошибка лицензии | Enhancement завершается ошибкой, BES не публикуется как T/X |
+| S-012 | Неизвестный профиль | `UNSUPPORTED_CADES_PROFILE` |
 | V-001 | Проверка detached корректной подписи | `valid=true` |
 | V-002 | Проверка attached корректной подписи | `valid=true` |
 | V-003 | Изменён исходный документ | `valid=false` |
 | V-004 | Изменён файл подписи | `valid=false` или контролируемая API ошибка |
 | V-005 | Повреждённый/пустой файл подписи | Контролируемая ошибка |
 | V-006 | Неизвестный профиль/атрибут | Статус SDK, не crash |
+| V-007 | T подпись проверяется как BES | Не считать успешный BES check доказательством T |
+| V-008 | X Long Type 1 проверяется как BES | Не считать успешный BES check доказательством X Long Type 1 |
+| V-009 | Проверка T и X Long Type 1 с явным profile | SDK проверяет запрошенный профиль; timestamp извлекается отдельно |
 | F-001 | Путь с кириллицей и пробелами | Успешное чтение/запись |
 | F-002 | Нет прав на файл/каталог | Контролируемая ошибка |
 | F-003 | Целевой файл уже существует | Заменяется согласно текущей политике |
