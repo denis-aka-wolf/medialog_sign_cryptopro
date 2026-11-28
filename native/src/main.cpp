@@ -552,9 +552,10 @@ int main() {
             std::cout << "{\"ok\":false,\"action\":\"unknown\",\"error\":{\"code\":\"REQUEST_TOO_LARGE\",\"message\":\"JSON request exceeds 1 MiB.\"}}" << std::endl;
             return 1;
         }
-        if (ch != '\\r') line.push_back(ch);
+        line.push_back(ch);
     }
     if (!std::cin && line.empty()) return 2;
+    if (!line.empty() && line.back() == '\\r') line.pop_back();
     if (std::cin.peek() != std::char_traits<char>::eof()) {
         std::cout << "{\"ok\":false,\"action\":\"unknown\",\"error\":{\"code\":\"INVALID_JSON\",\"message\":\"Only one JSON line is accepted per process.\"}}" << std::endl;
         return 1;
