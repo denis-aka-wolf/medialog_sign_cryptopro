@@ -1,63 +1,75 @@
 # Инвентаризация CryptoPro SDK
 
-Основано на переданном `SDK.zip` и `pki_sdk_docs.zip`. Бинарные SDK и CHM файлы в исходный проект не копируются.
+## Источник SDK в репозитории
 
-## Подтверждённые файлы
+Локальная поставка документации и runtime installer хранится в `docs/pki_sdk_docs/`:
+
+| Файл | Назначение |
+|---|---|
+| `cades.chm` | CAdES SDK API reference |
+| `CpPkiSdk.chm` | PKI SDK API reference |
+| `pkivalidator.chm` | PKI Validator API reference |
+| `cadessdk_2.0.15273.msi` | CAdES SDK installer 2.0.15273 |
+
+## SDK headers / libraries
+
+На основе ранее предоставленного SDK package:
 
 | Путь в SDK | Назначение |
 |---|---|
-| `SDK/include/cades.h` | CAdES C API, структуры и функции |
-| `SDK/include/ades-core.h` | Базовые ADES-типы и статусы |
+| `SDK/include/cades.h` | CAdES C API |
+| `SDK/include/ades-core.h` | ADES-типы и статусы |
 | `SDK/include/cadescom.h` | COM API declarations, не используется текущим Bridge |
-| `SDK/include/pkivalidator.h` | COM declarations PKI Validator, не используется текущим Bridge |
-| `SDK/lib/amd64/cades.lib` | x64 import library CAdES |
+| `SDK/include/pkivalidator.h` | PKI Validator declarations |
+| `SDK/lib/amd64/cades.lib` | x64 import library |
 | `SDK/lib/cades.lib` | Win32 import library |
-| `SDK/bin/cades-x64.msi` | x64 runtime installer |
-| `SDK/bin/cades-win32.msi` | Win32 runtime installer |
-| `SDK/bin/cadescom-x64.msi` | x64 CAdESCOM installer |
-| `SDK/bin/cadescom-win32.msi` | Win32 CAdESCOM installer |
-| `SDK/samples/cades_samples.zip` | Набор официальных C++ примеров |
-| `SDK/help/pkivalidator.chm` | PKI Validator help |
+| `SDK/samples/cades_samples.zip` | Официальные C++ samples |
 
-В отдельном `pki_sdk_docs.zip` переданы `cades.chm`, `CpPkiSdk.chm`, `pkivalidator.chm`.
+## Важные C API операции
 
-## Примеры, использованные при проектировании
+- `CadesSignMessage` — создать CAdES сообщение.
+- `CadesEnhanceMessage` — повысить выбранный signer.
+- `CadesEnhanceMessageAll` — повысить все signer.
+- `CadesVerifyMessage` / `CadesVerifyDetachedMessage` — проверить сообщение.
+- `CadesFreeBlob` / `CadesFreeVerificationInfo` — освободить SDK результаты.
 
-- `SimplifiedSignCadesBes` — simplified CAdES-BES signing через `CadesSignMessage`.
-- `SimplifiedVerifyCadesBes` — attached verify через `CadesVerifyMessage` и освобождение ресурсов.
-- `LowlevelSignDetachedCades` — low-level detached signing pipeline.
-- `LowlevelVerifyCades` / `LowlevelVerifyCadesBes` — низкоуровневая проверка.
-- `LowlevelEnhanceCadesBes` — повышение уровня подписи и TSP usage.
-- `SimplifiedSignCades`, `SimplifiedVerifyCades` — упрощённые CAdES сценарии.
+Примеры из официальной документации включают:
+- `SimplifiedSignCadesBes`;
+- `SimplifiedVerifyCadesBes`;
+- `LowlevelSignDetachedCades`;
+- `LowlevelVerifyCades`;
+- `LowlevelEnhanceCadesBes`.
 
-## Ключевые подтверждённые объявления из `cades.h`
+## Подтверждённые параметры enhancement
 
-- `CadesSignMessage`
-- `CadesVerifyMessage`
-- `CadesVerifyDetachedMessage`
-- `CadesFreeBlob`
-- `CadesFreeVerificationInfo`
+`CADES_SIGN_PARA` задаёт целевой тип, сертификат, hash OID, дополнительное хранилище, TSP connection, proxy и дополнительные OCSP URL. Дополнительные OCSP поля доступны начиная с SDK 2.00.13126.
 
-Структуры:
+Официальный simplified C++ sample повышения BES до X Long Type 1 использует:
+- `CADES_SERVICE_CONNECTION_PARA`;
+- `CADES_SIGN_PARA`;
+- `CADES_ENHANCE_MESSAGE_PARA`;
+- `CadesEnhanceMessage`;
+- `CadesFreeBlob`.
 
-- `CADES_SIGN_PARA`
-- `CADES_SIGN_MESSAGE_PARA`
-- `CADES_VERIFICATION_PARA`
-- `CADES_VERIFY_MESSAGE_PARA`
-- `CADES_VERIFICATION_INFO`
+См. [CADES_IMPLEMENTATION_SPEC](CADES_IMPLEMENTATION_SPEC.md).
 
-## Runtime
+## Runtime и разрядность
 
-`cades.lib` импортирует `cades.dll`. SDK headers/import library не заменяют runtime installer и CryptoPro CSP. Установленный на машине SDK root пользователя указан как:
+`cades.lib` импортирует `cades.dll`. SDK headers/import library не заменяют CAdES runtime и CryptoPro CSP. x64 сборка должна ссылаться на `lib/amd64/cades.lib`. Не смешивать Win32 и x64 компоненты.
+
+Ранее указанный SDK root:
 
 ```text
 C:\Program Files (x86)\Crypto Pro\SDK
 ```
 
-Сборка x64 должна ссылаться именно на `lib\\amd64\\cades.lib`. Не смешивать Win32 headers/libs/runtime с x64 процессом.
+## Лицензирование
 
-## Не включено
+Для профилей с timestamp и revocation evidence проверить лицензии CryptoPro TSP Client и OCSP Client на каждой целевой машине. Установленный CAdES SDK MSI сам по себе не подтверждает наличие runtime, CSP, TSP/OCSP лицензий или доступность служб.
 
-- SDK installers, import libraries, runtime DLL и CHM документация.
-- CSP лицензии/ключи/сертификаты.
-- Любые закрытые ключи и PIN.
+## Важные ограничения
+
+- CHM/MSI в репозитории являются локальным reference package; точный ABI проверять по `cades.h` из используемой сборки.
+- Не копировать DLL из SDK произвольно.
+- Фиксировать версии CSP, CAdES runtime, SDK headers/import library и драйверов.
+- Не включать лицензии, PIN, секреты и закрытые ключи в репозиторий.

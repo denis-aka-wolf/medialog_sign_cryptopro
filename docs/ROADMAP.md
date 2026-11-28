@@ -1,8 +1,26 @@
-# Ограничения и roadmap
+# Roadmap до промышленного релиза
 
-## Реализовано в исходниках 0.1.0
+> Обязательный релизный объём: единый CryptoPro Signing Service API и три профиля CAdES: BES, T, X Long Type 1.
+>
+> SDK source of truth: `docs/pki_sdk_docs/`. Перед реализацией сверять API/ABI с CHM и заголовками SDK 2.0.15273.
 
-- [x] C++17 x64 консольный Bridge skeleton.
+## Целевой результат
+
+- Один сервис и единый versioned API для Desktop и Server-side.
+- Desktop клиент подключается к loopback endpoint.
+- Server-side клиент подключается к тому же API по HTTPS.
+- Общие Certificate Manager, CAdES Engine, Verification Engine, Operation Manager и Audit.
+- Реализованы и проверены CAdES-BES, CAdES-T, CAdES-X Long Type 1.
+- Подпись и доверие к PKI представлены раздельными результатами.
+- Установщик, обновление, журналирование, тесты и документация готовы.
+
+Архитектура: [ARCHITECTURE](ARCHITECTURE.md). Спецификация SDK: [CADES_IMPLEMENTATION_SPEC](CADES_IMPLEMENTATION_SPEC.md). Профили: [CADES_PROFILES](CADES_PROFILES.md).
+
+## Текущее состояние исходников 0.1.0
+
+### Реализовано в исходниках
+
+- [x] C++17 x64 process-per-request Bridge.
 - [x] Один JSON request на процесс.
 - [x] `status` и поиск зарегистрированных CryptoPro providers.
 - [x] Перечисление `CurrentUser\\MY`.
@@ -11,59 +29,127 @@
 - [x] Attached/detached verify calls.
 - [x] Освобождение CAdES blobs/verification info.
 - [x] CMake x64 project и PowerShell build/smoke scripts.
-- [x] Документация архитектуры, API, безопасности, тестирования и сервера.
+- [x] Документация и SDK reference package в `docs/pki_sdk_docs/`.
 
-## Не проверено
+### Не подтверждено
 
 - [ ] Компиляция C++ проекта MSVC x64.
-- [ ] Запуск Bridge на Windows с установленным CAdES runtime.
+- [ ] Запуск на Windows с установленным CAdES runtime.
 - [ ] Подписание реальным CSP ключом/токеном.
-- [ ] Attached/detached verify на реальных артефактах.
-- [ ] Проверка всех кодов статуса CAdES на установленной версии SDK.
+- [ ] Независимая проверка реальных BES артефактов.
 - [ ] Совместимость с целевой Medialog/Нетрica системой.
-- [ ] Работа на Windows Server.
+- [ ] Работа на Windows Server и в Session 0.
+- [ ] Соответствие конкретной поставке SDK и лицензии.
 
-## Следующие технические задачи
+## Этап 0. Документация и фиксация архитектуры
 
-### P0: первая сборка и исправления
+- [x] Считать `docs/pki_sdk_docs/` первичным локальным источником API reference.
+- [x] Устранить конфликт старой документации C#/.NET COM и текущего C++ Native Bridge.
+- [x] Зафиксировать единый API с loopback и remote HTTPS endpoints.
+- [x] Добавить спецификацию pipeline BES → T/X Long Type 1.
+- [ ] Извлечь и зафиксировать ABI/typedef из локального `cades.h` 2.0.15273.
+- [ ] Зафиксировать TSP/OCSP endpoints и лицензионную модель.
 
-1. Собрать MSVC x64 на машине с SDK.
-2. Устранить компиляторные/API несовпадения с установленной версией.
-3. Проверить runtime DLL load и provider detection.
-4. Выполнить тест на тестовом сертификате.
-5. Проверить detached/attached форматы независимым валидатором.
+## Этап 1. Сборка и проверка CAdES-BES
 
-### P1: сертификаты и диагностика
+- [ ] Сборка Release x64 под MSVC.
+- [ ] Проверка загрузки `cades.dll`, линковки и CSP.
+- [ ] Диагностика сертификатов и фактического доступа к private key.
+- [ ] Attached/detached BES.
+- [ ] Проверка независимым валидатором.
+- [ ] Тесты Cyrillic paths, лимитов файлов и ошибок токена.
+- [ ] Зафиксировать версии Windows, CSP, CAdES SDK/runtime, драйверов и носителей.
 
-1. Проверять реальный доступ к private key с `CryptAcquireCertificatePrivateKey` в безопасном/тихом режиме и возвращать диагностический статус.
-2. Поддержать выбор CurrentUser/LocalMachine только после решения security context.
-3. Возвращать алгоритм ключа, enhanced key usage, key usage и причины исключения сертификата из списка.
-4. Добавить проверку дубликатов thumbprint и обработку некорректных свойств сертификата.
+**Выход:** воспроизводимая сборка и подтверждённый BES на целевом оборудовании.
 
-### P1: верификация и политика доверия
+## Этап 2. CAdES enhancement и профили T / X Long Type 1
 
-1. Уточнить параметры CAdES verification из `cades.chm`.
-2. Разделить integrity, chain, revocation и timestamp status в модели результата.
-3. Определить использование PKI Validator/PKI SDK.
-4. Добавить trust report с кодами причин.
+- [ ] Добавить C++ RAII wrapper для `CADES_SERVICE_CONNECTION_PARA`, `CADES_SIGN_PARA`, `CADES_ENHANCE_MESSAGE_PARA`.
+- [ ] Добавить `CadesEnhanceMessage` для выбранного signer.
+- [ ] Добавить `CadesEnhanceMessageAll` только при подтверждённом сценарии multi-signer.
+- [ ] Реализовать BES → T.
+- [ ] Реализовать BES → X Long Type 1.
+- [ ] Реализовать upgrade существующего T → X Long Type 1.
+- [ ] Добавить явные TSP/OCSP/proxy параметры и серверную конфигурацию.
+- [ ] Проверить лицензии TSP Client / OCSP Client.
+- [ ] Добавить profile-aware verification и VerificationReport.
+- [ ] Проверить attached/detached и независимый валидатор.
 
-### P2: расширение CAdES
+**Выход:** все три профиля реально создаются и проходят проверку.
 
-1. Профили CAdES-T и X Long Type 1 с TSP.
-2. Настройка TSA/OCSP/Proxy без секретов в открытом виде.
-3. Повышение уровня подписи и архивные timestamps.
-4. Потоковые операции для больших документов.
-5. Countersignature и несколько signer, если нужны бизнес-процессу.
+## Этап 3. Единый Signing Service и API
 
-### P2: production hardening
+- [ ] Перевести process-per-request Bridge в долгоживущий сервис с единым API.
+- [ ] Transport Adapter для loopback и HTTPS.
+- [ ] Единый Operation Manager: operationId, статусы, timeout, cancellation, получение результата.
+- [ ] Аутентификация/авторизация, RBAC и политики профилей.
+- [ ] Защита локального endpoint от нежелательных Origin/CSRF.
+- [ ] Защита сетевого endpoint TLS и mTLS/Windows Authentication.
+- [ ] Стабильные контракты Flutter/Medialog.
+- [ ] Конкурентные запросы и graceful shutdown.
 
-1. Защищённая файловая область и allowlist путей.
-2. Подписываемый immutable input snapshot и хеш до/после операции.
-3. Audit log и correlation ID.
-4. Ограничения размера, времени и параллелизма.
-5. Автоматические интеграционные тесты на Windows CI.
-6. Подписывание самого Bridge code-signing сертификатом.
+## Этап 4. Windows hosting и security context
 
-### P3: background service
+- [ ] Desktop host в интерактивной пользовательской сессии для USB-токена/PIN.
+- [ ] Проверить необходимость user-session broker/agent.
+- [ ] Server host как Windows Service под выделенной service identity.
+- [ ] Настроить доступ к сертификатам и key containers.
+- [ ] Проверить CurrentUser/LocalMachine stores, HSM и token support.
+- [ ] Исключить зависимость от интерактивного desktop в Session 0.
+- [ ] Установщик, автозапуск, recovery, ACL и ротация логов.
 
-Спроектировать отдельный Windows Service/worker. Не расширять текущий desktop Bridge скрытыми service режимами.
+## Этап 5. Certificate Manager и Verification Engine
+
+- [ ] Полные свойства сертификата, Key Usage, EKU, алгоритмы, срок действия.
+- [ ] Отдельно: private-key link, фактический доступ к ключу, пригодность для профиля.
+- [ ] Структурированный VerificationReport.
+- [ ] Раздельные integrity, profile, certificate, chain, revocation, timestamp, policy.
+- [ ] PKI Validator/PKI SDK интеграция по локальному CHM.
+- [ ] Строгая и диагностическая политики проверки.
+
+## Этап 6. Production hardening
+
+- [ ] Строгий JSON parser и schema validation.
+- [ ] Ограничение размера запроса во время чтения.
+- [ ] Лимиты размера файлов, потоковая обработка где поддерживается.
+- [ ] Защищённая рабочая область, ACL, защита от reparse point и TOCTOU.
+- [ ] Безопасные временные файлы, атомарная запись, политика overwrite.
+- [ ] SHA-256 исходного и итогового артефактов.
+- [ ] Ограничения параллелизма, timeout, cancellation и восстановление после извлечения токена.
+- [ ] Audit с correlationId/operationId без PIN и секретов.
+- [ ] Code signing исполняемых файлов и установщика.
+- [ ] Security review и Windows CI.
+
+## Этап 7. Интеграция Medialog
+
+- [ ] Выбор документа в Medialog.
+- [ ] Передача документа в Signing Service.
+- [ ] Выбор сертификата и профиля BES/T/X Long Type 1.
+- [ ] Подписание и проверка артефакта.
+- [ ] Возврат артефакта и VerificationReport.
+- [ ] Сохранение operationId, documentId, хешей, профиля, сертификата, времени и результата.
+- [ ] Audit trail и повторное получение результата.
+
+## Этап 8. Выпуск и эксплуатация
+
+- [ ] Установщик Desktop и Server профилей.
+- [ ] Проверка prerequisites: CSP, CAdES runtime, TSP/OCSP licenses, драйверы.
+- [ ] Обновление/откат и безопасное удаление.
+- [ ] Диагностический пакет без секретов.
+- [ ] Матрица совместимости и Release Manifest.
+- [ ] Приёмка на Windows 10/11 и Windows Server раздельно.
+- [ ] Runbook, troubleshooting и инструкции администратору/пользователю.
+
+## Критерии Production
+
+- [ ] Release x64 сборка воспроизводима.
+- [ ] Версии CSP/SDK/runtime и лицензии зафиксированы.
+- [ ] BES, T и X Long Type 1 реально создаются и проверяются.
+- [ ] Проверены аппаратные токены, контейнеры и HSM.
+- [ ] Криптографическая целостность отделена от доверия/отзыва/времени.
+- [ ] Desktop localhost и Server HTTPS используют один API и одно ядро.
+- [ ] Service identity, user context, PIN UX и доступ к ключам проверены.
+- [ ] Интеграция Medialog и аудит завершены.
+- [ ] Установщик, мониторинг, документация и приёмочный отчёт готовы.
+
+> «Реализовано в исходниках» не равно «собрано», «протестировано» или «допущено в production».
