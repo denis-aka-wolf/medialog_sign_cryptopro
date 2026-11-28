@@ -555,8 +555,7 @@ int main() {
         if (ch != '\\r') line.push_back(ch);
     }
     if (!std::cin && line.empty()) return 2;
-    std::string trailingLine;
-    if (std::getline(std::cin, trailingLine)) {
+    if (std::cin.peek() != std::char_traits<char>::eof()) {
         std::cout << "{\"ok\":false,\"action\":\"unknown\",\"error\":{\"code\":\"INVALID_JSON\",\"message\":\"Only one JSON line is accepted per process.\"}}" << std::endl;
         return 1;
     }
