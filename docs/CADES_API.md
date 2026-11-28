@@ -102,3 +102,18 @@ SDK официально демонстрирует повышение BES до 
 - `CADES_VERIFICATION_INFO` освобождается через `CadesFreeVerificationInfo`.
 - Не использовать `free`, `delete[]` или `LocalFree` для памяти SDK.
 - Для новых функций проверить ownership каждого выходного объекта в локальном CHM.
+
+
+## Подтверждённый ABI локального SDK 2.0.15273
+
+Проверены файлы `docs/pki_sdk_docs/SDK/include/cades.h` и `ades-core.h`. В заголовке подтверждены:
+
+- `CADES_SERVICE_CONNECTION_PARA`: `dwSize`, `wszUri`, `pAuthPara`;
+- `CADES_SIGN_PARA`: базовые поля TSP/proxy/store и условные дополнительные OCSP поля под `CADES_PARA_HAS_EXTRA_FIELDS`;
+- `CADES_ENHANCE_MESSAGE_PARA`: `dwSize`, `dwMsgEncodingType`, `pCadesSignPara`;
+- `CADES_VERIFICATION_PARA`: базовые поля и условный `dwFlags`;
+- прототипы `CadesEnhanceMessage`, `CadesEnhanceMessageAll`, `CadesFreeBlob`.
+
+Текущая конфигурация Native Bridge не определяет `CADES_PARA_HAS_EXTRA_FIELDS` и `CADES_PARA_HAS_EXTRA_TIME_FIELDS`. Поэтому optional поля, зависящие от этих макросов, не используются. В `native/src/main.cpp` добавлены x64 `static_assert` размеров четырёх структур, чтобы сборка остановилась при неожиданном изменении layout.
+
+Реализация в исходниках: BES → T/X Long Type 1 enhancement, опциональный TSP URL, выбор ожидаемого профиля при проверке, извлечение signature timestamp. Не подтверждено до Windows build/run: реальный TSP/OCSP roundtrip, лицензирование, detached/attached совместимость enhancement и соответствие итоговых CMS независимому валидатору.
