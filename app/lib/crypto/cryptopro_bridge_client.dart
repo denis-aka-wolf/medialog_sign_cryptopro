@@ -84,42 +84,54 @@ class CryptoProBridgeClient {
     required String inputPath,
     required String outputPath,
     required String thumbprint,
+    String profile = 'CAdES-BES',
+    String? tspUrl,
   }) =>
       _call({
         'action': 'sign-detached',
         'inputPath': inputPath,
         'outputPath': outputPath,
         'thumbprint': thumbprint,
+        'profile': profile,
+        if (tspUrl != null && tspUrl.isNotEmpty) 'tspUrl': tspUrl,
       });
 
   Future<Map<String, dynamic>> signAttached({
     required String inputPath,
     required String outputPath,
     required String thumbprint,
+    String profile = 'CAdES-BES',
+    String? tspUrl,
   }) =>
       _call({
         'action': 'sign-attached',
         'inputPath': inputPath,
         'outputPath': outputPath,
         'thumbprint': thumbprint,
+        'profile': profile,
+        if (tspUrl != null && tspUrl.isNotEmpty) 'tspUrl': tspUrl,
       });
 
   Future<Map<String, dynamic>> verifyDetached({
     required String inputPath,
     required String signaturePath,
+    String profile = 'CAdES-BES',
   }) =>
       _call({
         'action': 'verify-detached',
         'inputPath': inputPath,
         'signaturePath': signaturePath,
+        'profile': profile,
       });
 
   Future<Map<String, dynamic>> verifyAttached({
     required String signaturePath,
+    String profile = 'CAdES-BES',
   }) =>
       _call({
         'action': 'verify-attached',
         'inputPath': signaturePath,
+        'profile': profile,
       });
 
   Future<Map<String, dynamic>> _call(Map<String, Object?> request) async {
