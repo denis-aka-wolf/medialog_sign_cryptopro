@@ -103,7 +103,8 @@ Response:
 ```json
 {
   "action":"verify-attached",
-  "inputPath":"C:\\CryptoProTest\\document-attached.p7s"
+  "inputPath":"C:\\CryptoProTest\\document-attached.p7s",
+  "profile":"CAdES-X Long Type 1"
 }
 ```
 
@@ -129,6 +130,9 @@ Response:
 | `INPUT_FILE_READ_FAILED` | Ошибка чтения |
 | `FILE_TOO_LARGE` | Превышен лимит 4 GiB |
 | `CADES_SIGN_FAILED` | CAdES signing API завершился ошибкой |
+| `CADES_ENHANCE_FAILED` | Не удалось повысить BES до запрошенного профиля |
+| `UNSUPPORTED_CADES_PROFILE` | Запрошен неподдерживаемый профиль |
+| `INVALID_TSP_URL` | TSP URL не является HTTP(S) URL |
 | `EMPTY_SIGNATURE` | Файл подписи пуст |
 | `OUTPUT_FILE_*` | Ошибка создания/записи/перемещения результата |
 
