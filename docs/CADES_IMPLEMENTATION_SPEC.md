@@ -339,7 +339,8 @@ Bridge сам выполняет BES → enhancement → verification. Клие�
 - [x] Сверить typedef `CADES_SERVICE_CONNECTION_PARA` и auth fields.
 - [x] Сверить C API prototype для `CadesEnhanceMessage` и `CadesEnhanceMessageAll`.
 - [x] Проверить enum constants из `cades.h` SDK 2.0.15273.
-- [ ] Проверить macro `CADES_PARA_HAS_EXTRA_FIELDS` и `CADES_SKIP_IE_PROXY_CONFIGURATION`.
+- [x] Зафиксировать отсутствие `CADES_PARA_HAS_EXTRA_FIELDS` в текущей конфигурации Native Bridge; дополнительные поля не включаются.
+- [ ] Проверить использование `CADES_SKIP_IE_PROXY_CONFIGURATION` в server-host конфигурации.
 - [ ] Зафиксировать TSP/OCSP license prerequisites и тестовые endpoint.
 - [ ] Выполнить build и реальные тесты на Windows с CryptoPro CSP/CAdES runtime.
 
