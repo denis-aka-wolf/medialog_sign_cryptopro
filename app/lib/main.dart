@@ -43,6 +43,8 @@ class _WorkbenchPageState extends State<WorkbenchPage> {
   final _attachedPath = TextEditingController(
     text: r'C:\CryptoProTest\source-attached.p7s',
   );
+  final _tspUrl = TextEditingController();
+  String _selectedProfile = 'CAdES-BES';
 
   CryptoProBridgeClient? _client;
   List<CryptoProCertificate> _certificates = [];
@@ -57,6 +59,7 @@ class _WorkbenchPageState extends State<WorkbenchPage> {
     _inputPath.dispose();
     _signaturePath.dispose();
     _attachedPath.dispose();
+    _tspUrl.dispose();
     super.dispose();
   }
 
@@ -125,6 +128,8 @@ class _WorkbenchPageState extends State<WorkbenchPage> {
           inputPath: _inputPath.text.trim(),
           outputPath: _signaturePath.text.trim(),
           thumbprint: cert.thumbprint,
+          profile: _selectedProfile,
+          tspUrl: _tspUrl.text.trim(),
         );
         _append('Ответ sign-detached:\n${result.toString()}');
       });
@@ -136,6 +141,8 @@ class _WorkbenchPageState extends State<WorkbenchPage> {
           inputPath: _inputPath.text.trim(),
           outputPath: _attachedPath.text.trim(),
           thumbprint: cert.thumbprint,
+          profile: _selectedProfile,
+          tspUrl: _tspUrl.text.trim(),
         );
         _append('Ответ sign-attached:\n${result.toString()}');
       });
@@ -144,6 +151,7 @@ class _WorkbenchPageState extends State<WorkbenchPage> {
         final result = await _bridge.verifyDetached(
           inputPath: _inputPath.text.trim(),
           signaturePath: _signaturePath.text.trim(),
+          profile: _selectedProfile,
         );
         _append('Ответ verify-detached:\n${result.toString()}');
       });
@@ -288,6 +296,25 @@ class _WorkbenchPageState extends State<WorkbenchPage> {
                 Text('3. Файлы и операции',
                     style: Theme.of(context).textTheme.titleLarge),
                 const SizedBox(height: 12),
+                DropdownButtonFormField<String>(
+                  value: _selectedProfile,
+                  decoration: const InputDecoration(
+                    labelText: 'Профиль CAdES',
+                    border: OutlineInputBorder(),
+                  ),
+                  items: const [
+                    DropdownMenuItem(value: 'CAdES-BES', child: Text('CAdES-BES')),
+                    DropdownMenuItem(value: 'CAdES-T', child: Text('CAdES-T')),
+                    DropdownMenuItem(value: 'CAdES-X Long Type 1', child: Text('CAdES-X Long Type 1')),
+                  ],
+                  onChanged: _busy
+                      ? null
+                      : (value) {
+                          if (value != null) setState(() => _selectedProfile = value);
+                        },
+                ),
+                const SizedBox(height: 10),
+                _pathField('TSP URL (необязательно, пусто = настройки CryptoPro)', _tspUrl),
                 _pathField('Исходный файл', _inputPath),
                 _pathField('Detached signature output / input', _signaturePath),
                 _pathField('Attached signature output', _attachedPath),
