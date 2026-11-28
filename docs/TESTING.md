@@ -28,6 +28,9 @@
 | S-010 | Некорректный TSP URL | `INVALID_TSP_URL` до начала криптографической операции |
 | S-011 | TSP недоступен/ошибка лицензии | Enhancement завершается ошибкой, BES не публикуется как T/X |
 | S-012 | Неизвестный профиль | `UNSUPPORTED_CADES_PROFILE` |
+| S-013 | Upgrade существующего BES → T | Исходный CMS не перезаписывается; новый T файл создан |
+| S-014 | Upgrade существующего BES/T → X Long Type 1 | Исходный CMS не перезаписывается; новый X Long Type 1 файл создан |
+| S-015 | Upgrade с некорректным signerIndex | `INVALID_SIGNER_INDEX` |
 | V-001 | Проверка detached корректной подписи | `valid=true` |
 | V-002 | Проверка attached корректной подписи | `valid=true` |
 | V-003 | Изменён исходный документ | `valid=false` |
