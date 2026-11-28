@@ -43,6 +43,9 @@ class _WorkbenchPageState extends State<WorkbenchPage> {
   final _attachedPath = TextEditingController(
     text: r'C:\CryptoProTest\source-attached.p7s',
   );
+  final _upgradedPath = TextEditingController(
+    text: r'C:\CryptoProTest\source-upgraded.p7s',
+  );
   final _tspUrl = TextEditingController();
   String _selectedProfile = 'CAdES-BES';
 
@@ -59,6 +62,7 @@ class _WorkbenchPageState extends State<WorkbenchPage> {
     _inputPath.dispose();
     _signaturePath.dispose();
     _attachedPath.dispose();
+    _upgradedPath.dispose();
     _tspUrl.dispose();
     super.dispose();
   }
@@ -145,6 +149,20 @@ class _WorkbenchPageState extends State<WorkbenchPage> {
           tspUrl: _tspUrl.text.trim(),
         );
         _append('Ответ sign-attached:\n${result.toString()}');
+      });
+
+  Future<void> _upgradeSignature() =>
+      _run('Повышение существующей подписи', () async {
+        if (_selectedProfile == 'CAdES-BES') {
+          throw StateError('Для upgrade выберите CAdES-T или CAdES-X Long Type 1.');
+        }
+        final result = await _bridge.upgradeSignature(
+          inputPath: _signaturePath.text.trim(),
+          outputPath: _upgradedPath.text.trim(),
+          profile: _selectedProfile,
+          tspUrl: _tspUrl.text.trim(),
+        );
+        _append('Ответ upgrade-signature:\n${result.toString()}');
       });
 
   Future<void> _verifyDetached() => _run('Проверка detached-подписи', () async {
@@ -318,6 +336,7 @@ class _WorkbenchPageState extends State<WorkbenchPage> {
                 _pathField('Исходный файл', _inputPath),
                 _pathField('Detached signature output / input', _signaturePath),
                 _pathField('Attached signature output', _attachedPath),
+                _pathField('Upgraded signature output', _upgradedPath),
                 Wrap(spacing: 8, runSpacing: 8, children: [
                   _actionButton('Создать тестовый файл', Icons.note_add,
                       _createTestFile),
@@ -325,6 +344,8 @@ class _WorkbenchPageState extends State<WorkbenchPage> {
                       _signDetached),
                   _actionButton('Подписать attached', Icons.verified,
                       _signAttached),
+                  _actionButton('Повысить существующую подпись', Icons.upgrade,
+                      _upgradeSignature),
                   _actionButton('Проверить detached', Icons.fact_check,
                       _verifyDetached),
                   _actionButton('Изменить исходник', Icons.edit,
