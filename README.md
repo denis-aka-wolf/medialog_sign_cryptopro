@@ -19,7 +19,7 @@ Medialog подключается к одному **CryptoPro Signing Service AP
 - CAdES-T;
 - CAdES-X Long Type 1.
 
-Текущая реализация содержит C++17 Native Bridge с вызовами CAdES-BES attached/detached. CAdES-T и CAdES-X Long Type 1 пока являются задачами roadmap. Наличие исходных вызовов не означает, что они собраны и прошли криптографические тесты.
+Native Bridge реализует создание CAdES-BES и повышение результата до CAdES-T или CAdES-X Long Type 1 через `CadesEnhanceMessage`. Flutter Workbench позволяет выбрать профиль и необязательный TSP URL. Проверка принимает ожидаемый профиль и возвращает статус SDK и время signature timestamp. Реализация ещё требует сборки на Windows с установленным SDK 2.0.15273 и криптографических acceptance-тестов на реальных тестовых сертификатах, TSP и OCSP.
 
 ## Структура
 
