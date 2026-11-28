@@ -112,6 +112,22 @@ class CryptoProBridgeClient {
         if (tspUrl != null && tspUrl.isNotEmpty) 'tspUrl': tspUrl,
       });
 
+  Future<Map<String, dynamic>> upgradeSignature({
+    required String inputPath,
+    required String outputPath,
+    required String profile,
+    String? tspUrl,
+    int signerIndex = 0,
+  }) =>
+      _call({
+        'action': 'upgrade-signature',
+        'inputPath': inputPath,
+        'outputPath': outputPath,
+        'profile': profile,
+        'signerIndex': signerIndex.toString(),
+        if (tspUrl != null && tspUrl.isNotEmpty) 'tspUrl': tspUrl,
+      });
+
   Future<Map<String, dynamic>> verifyDetached({
     required String inputPath,
     required String signaturePath,
