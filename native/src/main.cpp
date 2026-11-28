@@ -372,6 +372,65 @@ static std::string Sign(const std::map<std::string, std::string>& req, bool deta
     return out.str();
 }
 
+
+static std::string UpgradeSignature(const std::map<std::string, std::string>& req) {
+    auto get = [&](const char* k) -> std::string { auto i = req.find(k); return i == req.end() ? std::string() : i->second; };
+    const std::string inputPath = get("inputPath"), outputPath = get("outputPath");
+    const DWORD targetProfile = CadesProfileFromName(get("profile"));
+    const std::string tspUrl = get("tspUrl");
+    if (inputPath.empty() || outputPath.empty()) throw BridgeError("PATH_REQUIRED", "Для повышения подписи необходимо указать inputPath и outputPath.");
+    if (SamePath(inputPath, outputPath)) throw BridgeError("INPUT_OUTPUT_PATH_COLLISION", "Входной и выходной пути не должны совпадать.");
+    if (targetProfile == CADES_BES) throw BridgeError("INVALID_UPGRADE_PROFILE", "Upgrade поддерживает только CAdES-T и CAdES-X Long Type 1.");
+    if (!tspUrl.empty() && tspUrl.rfind("http://", 0) != 0 && tspUrl.rfind("https://", 0) != 0)
+        throw BridgeError("INVALID_TSP_URL", "tspUrl должен начинаться с http:// или https://.");
+    const std::wstring tspUri = Utf8ToWide(tspUrl);
+    const auto input = ReadFile(inputPath);
+    if (input.empty()) throw BridgeError("EMPTY_SIGNATURE", "Файл подписи пуст.");
+
+    CADES_SERVICE_CONNECTION_PARA tsp{}; tsp.dwSize = sizeof(tsp);
+    if (!tspUri.empty()) tsp.wszUri = tspUri.c_str();
+    CADES_SIGN_PARA signPara{}; signPara.dwSize = sizeof(signPara);
+    signPara.dwCadesType = targetProfile;
+    if (!tspUrl.empty()) signPara.pTspConnectionPara = &tsp;
+    CADES_ENHANCE_MESSAGE_PARA enhance{}; enhance.dwSize = sizeof(enhance);
+    enhance.dwMsgEncodingType = X509_ASN_ENCODING | PKCS_7_ASN_ENCODING;
+    enhance.pCadesSignPara = &signPara;
+
+    DWORD signerIndex = 0;
+    const std::string signerIndexText = get("signerIndex");
+    if (!signerIndexText.empty()) {
+        try {
+            size_t parsed = 0;
+            const unsigned long value = std::stoul(signerIndexText, &parsed, 10);
+            if (parsed != signerIndexText.size() || value > 0xFFFFFFFFul)
+                throw std::invalid_argument("signerIndex");
+            signerIndex = static_cast<DWORD>(value);
+        } catch (...) {
+            throw BridgeError("INVALID_SIGNER_INDEX", "signerIndex должен быть целым неотрицательным числом.");
+        }
+    }
+
+    PCRYPT_DATA_BLOB enhancedBlob = nullptr;
+    const BOOL ok = CadesEnhanceMessage(&enhance, signerIndex, input.data(),
+        static_cast<DWORD>(input.size()), &enhancedBlob);
+    const DWORD error = ok ? ERROR_SUCCESS : GetLastError();
+    if (!ok || !enhancedBlob) {
+        if (enhancedBlob) CadesFreeBlob(enhancedBlob);
+        throw BridgeError("CADES_ENHANCE_FAILED", "CadesEnhanceMessage завершилась ошибкой: " + LastErrorHex(error));
+    }
+    try { WriteFile(outputPath, enhancedBlob->pbData, enhancedBlob->cbData); }
+    catch (...) { CadesFreeBlob(enhancedBlob); throw; }
+    const DWORD bytes = enhancedBlob->cbData;
+    CadesFreeBlob(enhancedBlob);
+    std::ostringstream out; out << "{\"inputPath\":" << JsonEscape(inputPath)
+        << ",\"outputPath\":" << JsonEscape(outputPath)
+        << ",\"signatureFormat\":" << JsonEscape(CadesProfileName(targetProfile))
+        << ",\"requestedProfile\":" << JsonEscape(CadesProfileName(targetProfile))
+        << ",\"signerIndex\":" << signerIndex
+        << ",\"bytesWritten\":" << bytes << '}';
+    return out.str();
+}
+
 static const char* VerifyStatusName(DWORD s) {
     switch (s) {
         case CADES_VERIFY_SUCCESS: return "success";
@@ -471,6 +530,7 @@ static std::string Dispatch(const std::map<std::string, std::string>& req, std::
     if (action == "list-certificates") return ListCertificates();
     if (action == "sign-detached") return Sign(req, true);
     if (action == "sign-attached") return Sign(req, false);
+    if (action == "upgrade-signature") return UpgradeSignature(req);
     if (action == "verify-detached") return Verify(req, true);
     if (action == "verify-attached") return Verify(req, false);
     throw BridgeError("UNKNOWN_ACTION", "Неизвестная команда Bridge: " + action);
