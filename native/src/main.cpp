@@ -262,19 +262,50 @@ static std::string ListCertificates() {
     CertCloseStore(store, 0); out << "]}"; return out.str();
 }
 
+static DWORD CadesProfileFromName(const std::string& name) {
+    if (name.empty() || name == "CAdES-BES" || name == "BES") return CADES_BES;
+    if (name == "CAdES-T" || name == "T") return CADES_T;
+    if (name == "CAdES-X Long Type 1" || name == "CAdES-X-LT1" || name == "X-LT1" || name == "XLT1")
+        return CADES_X_LONG_TYPE_1;
+    throw BridgeError("UNSUPPORTED_CADES_PROFILE", "Поддерживаются только CAdES-BES, CAdES-T и CAdES-X Long Type 1.");
+}
+static const char* CadesProfileName(DWORD profile) {
+    switch (profile) {
+        case CADES_BES: return "CAdES-BES";
+        case CADES_T: return "CAdES-T";
+        case CADES_X_LONG_TYPE_1: return "CAdES-X Long Type 1";
+        default: return "unknown";
+    }
+}
+
 static std::string Sign(const std::map<std::string, std::string>& req, bool detached) {
     auto get = [&](const char* k) -> std::string { auto i = req.find(k); return i == req.end() ? std::string() : i->second; };
     const std::string inputPath = get("inputPath"), outputPath = get("outputPath"), thumb = get("thumbprint");
+    const DWORD targetProfile = CadesProfileFromName(get("profile"));
+    const std::string tspUrl = get("tspUrl");
     if (inputPath.empty() || outputPath.empty()) throw BridgeError("PATH_REQUIRED", "Для подписания необходимо указать inputPath и outputPath.");
     if (SamePath(inputPath, outputPath)) throw BridgeError("INPUT_OUTPUT_PATH_COLLISION", "Входной и выходной пути не должны совпадать.");
+    if (!tspUrl.empty() && tspUrl.rfind("http://", 0) != 0 && tspUrl.rfind("https://", 0) != 0)
+        throw BridgeError("INVALID_TSP_URL", "tspUrl должен начинаться с http:// или https://.");
+
     auto content = ReadFile(inputPath);
     HCERTSTORE store = OpenMyStore();
     PCCERT_CONTEXT cert = nullptr;
     try { cert = FindCertificate(store, thumb); }
     catch (...) { CertCloseStore(store, 0); throw; }
-    if (!HasPrivateKeyLink(cert)) { CertFreeCertificateContext(cert); CertCloseStore(store, 0); throw BridgeError("PRIVATE_KEY_NOT_LINKED", "У сертификата отсутствует связь с закрытым ключом."); }
+    auto releaseCertificate = [&]() {
+        if (cert) { CertFreeCertificateContext(cert); cert = nullptr; }
+        if (store) { CertCloseStore(store, 0); store = nullptr; }
+    };
+    if (!HasPrivateKeyLink(cert)) {
+        releaseCertificate();
+        throw BridgeError("PRIVATE_KEY_NOT_LINKED", "У сертификата отсутствует связь с закрытым ключом.");
+    }
     const char* hashOid = HashOidForCert(cert);
-    if (!hashOid) { CertFreeCertificateContext(cert); CertCloseStore(store, 0); throw BridgeError("UNSUPPORTED_KEY_ALGORITHM", "Алгоритм открытого ключа сертификата не поддержан текущим сопоставлением хеш-OID."); }
+    if (!hashOid) {
+        releaseCertificate();
+        throw BridgeError("UNSUPPORTED_KEY_ALGORITHM", "Алгоритм открытого ключа сертификата не поддержан текущим сопоставлением хеш-OID.");
+    }
 
     CRYPT_SIGN_MESSAGE_PARA crypt{}; crypt.cbSize = sizeof(crypt);
     crypt.dwMsgEncodingType = X509_ASN_ENCODING | PKCS_7_ASN_ENCODING;
@@ -288,17 +319,51 @@ static std::string Sign(const std::map<std::string, std::string>& req, bool deta
     PCRYPT_DATA_BLOB signedBlob = nullptr;
     BOOL ok = CadesSignMessage(&para, detached ? TRUE : FALSE, 1, buffers, lengths, &signedBlob);
     DWORD error = ok ? ERROR_SUCCESS : GetLastError();
-    CertFreeCertificateContext(cert); CertCloseStore(store, 0);
     if (!ok || !signedBlob) {
         if (signedBlob) CadesFreeBlob(signedBlob);
-        throw BridgeError("CADES_SIGN_FAILED", "CadesSignMessage завершилась ошибкой: " + LastErrorHex(error));
+        releaseCertificate();
+        throw BridgeError("CADES_SIGN_FAILED", "CadesSignMessage (BES) завершилась ошибкой: " + LastErrorHex(error));
     }
+
+    if (targetProfile != CADES_BES) {
+        std::wstring tspUri = Utf8ToWide(tspUrl);
+        CADES_SERVICE_CONNECTION_PARA tsp{}; tsp.dwSize = sizeof(tsp);
+        if (!tspUri.empty()) tsp.wszUri = tspUri.c_str();
+
+        CADES_SIGN_PARA enhanceSign{}; enhanceSign.dwSize = sizeof(enhanceSign);
+        enhanceSign.dwCadesType = targetProfile;
+        enhanceSign.pSignerCert = cert;
+        enhanceSign.szHashAlgorithm = hashOid;
+        if (!tspUrl.empty()) enhanceSign.pTspConnectionPara = &tsp;
+
+        CADES_ENHANCE_MESSAGE_PARA enhance{}; enhance.dwSize = sizeof(enhance);
+        enhance.dwMsgEncodingType = X509_ASN_ENCODING | PKCS_7_ASN_ENCODING;
+        enhance.pCadesSignPara = &enhanceSign;
+
+        PCRYPT_DATA_BLOB enhancedBlob = nullptr;
+        ok = CadesEnhanceMessage(&enhance, 0, signedBlob->pbData, signedBlob->cbData, &enhancedBlob);
+        error = ok ? ERROR_SUCCESS : GetLastError();
+        CadesFreeBlob(signedBlob);
+        signedBlob = nullptr;
+        if (!ok || !enhancedBlob) {
+            if (enhancedBlob) CadesFreeBlob(enhancedBlob);
+            releaseCertificate();
+            throw BridgeError("CADES_ENHANCE_FAILED", std::string("CadesEnhanceMessage для ") +
+                CadesProfileName(targetProfile) + " завершилась ошибкой: " + LastErrorHex(error));
+        }
+        signedBlob = enhancedBlob;
+    }
+
+    releaseCertificate();
     try { WriteFile(outputPath, signedBlob->pbData, signedBlob->cbData); }
     catch (...) { CadesFreeBlob(signedBlob); throw; }
     const DWORD bytes = signedBlob->cbData; CadesFreeBlob(signedBlob);
     std::ostringstream out; out << "{\"outputPath\":" << JsonEscape(outputPath)
-        << ",\"signatureFormat\":\"CAdES-BES\",\"detached\":" << (detached ? "true" : "false")
-        << ",\"bytesWritten\":" << bytes << '}'; return out.str();
+        << ",\"signatureFormat\":" << JsonEscape(CadesProfileName(targetProfile))
+        << ",\"requestedProfile\":" << JsonEscape(CadesProfileName(targetProfile))
+        << ",\"detached\":" << (detached ? "true" : "false")
+        << ",\"bytesWritten\":" << bytes << '}';
+    return out.str();
 }
 
 static const char* VerifyStatusName(DWORD s) {
