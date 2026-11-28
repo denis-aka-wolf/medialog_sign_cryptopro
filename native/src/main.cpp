@@ -29,7 +29,7 @@ static_assert(sizeof(void*) == 8, "CryptoPro Native Bridge requires x64.");
 static_assert(sizeof(CADES_SERVICE_CONNECTION_PARA) == 24, "Unexpected CryptoPro SDK ABI: CADES_SERVICE_CONNECTION_PARA.");
 static_assert(sizeof(CADES_SIGN_PARA) == 56, "Unexpected CryptoPro SDK ABI: CADES_SIGN_PARA. Check CADES_PARA_HAS_EXTRA_FIELDS.");
 static_assert(sizeof(CADES_ENHANCE_MESSAGE_PARA) == 16, "Unexpected CryptoPro SDK ABI: CADES_ENHANCE_MESSAGE_PARA.");
-static_assert(sizeof(CADES_VERIFICATION_PARA) == 48, "Unexpected CryptoPro SDK ABI: CADES_VERIFICATION_PARA. Check CADES_PARA_HAS_EXTRA_FIELDS.");
+static_assert(sizeof(CADES_VERIFICATION_PARA) == 56, "Unexpected CryptoPro SDK ABI: CADES_VERIFICATION_PARA. Check CADES_PARA_HAS_EXTRA_FIELDS.");
 
 struct BridgeError : std::runtime_error {
     std::string code;
