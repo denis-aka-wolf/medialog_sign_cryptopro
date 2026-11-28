@@ -390,13 +390,14 @@ static std::string Verify(const std::map<std::string, std::string>& req, bool de
     auto get = [&](const char* k) -> std::string { auto i = req.find(k); return i == req.end() ? std::string() : i->second; };
     const std::string inputPath = get("inputPath");
     const std::string signaturePath = detached ? get("signaturePath") : get("inputPath");
+    const DWORD expectedProfile = CadesProfileFromName(get("profile"));
     if (inputPath.empty() || signaturePath.empty()) throw BridgeError("PATH_REQUIRED", "Для проверки необходимо указать пути к документу и подписи.");
     auto content = detached ? ReadFile(inputPath) : std::vector<BYTE>{};
     auto signature = ReadFile(signaturePath);
     if (signature.empty()) throw BridgeError("EMPTY_SIGNATURE", "Файл подписи пуст.");
     CRYPT_VERIFY_MESSAGE_PARA crypt{}; crypt.cbSize = sizeof(crypt);
     crypt.dwMsgAndCertEncodingType = X509_ASN_ENCODING | PKCS_7_ASN_ENCODING;
-    CADES_VERIFICATION_PARA cades{}; cades.dwSize = sizeof(cades); cades.dwCadesType = CADES_BES;
+    CADES_VERIFICATION_PARA cades{}; cades.dwSize = sizeof(cades); cades.dwCadesType = expectedProfile;
     CADES_VERIFY_MESSAGE_PARA para{}; para.dwSize = sizeof(para); para.pVerifyMessagePara = &crypt; para.pCadesVerifyPara = &cades;
     PCADES_VERIFICATION_INFO info = nullptr; PCRYPT_DATA_BLOB decoded = nullptr;
     BOOL ok = FALSE;
@@ -410,21 +411,23 @@ static std::string Verify(const std::map<std::string, std::string>& req, bool de
     }
     DWORD apiError = ok ? ERROR_SUCCESS : GetLastError();
     DWORD status = info ? info->dwStatus : 0xFFFFFFFF;
-    std::string signer;
-    std::string signingTime;
+    std::string signer, signingTime, signatureTimeStampTime;
     if (info) {
         if (info->pSignerCert) signer = WideToUtf8(CertName(info->pSignerCert, CERT_NAME_SIMPLE_DISPLAY_TYPE));
         if (info->pSigningTime) signingTime = FileTimeIso(*info->pSigningTime);
+        if (info->pSignatureTimeStampTime) signatureTimeStampTime = FileTimeIso(*info->pSignatureTimeStampTime);
     }
     if (decoded) CadesFreeBlob(decoded);
     if (info) CadesFreeVerificationInfo(info);
     const bool valid = ok && status == CADES_VERIFY_SUCCESS;
     std::ostringstream out; out << "{\"valid\":" << (valid ? "true" : "false")
         << ",\"apiSucceeded\":" << (ok ? "true" : "false")
+        << ",\"requestedProfile\":" << JsonEscape(CadesProfileName(expectedProfile))
         << ",\"statusCode\":" << status
         << ",\"status\":" << JsonEscape(VerifyStatusName(status))
         << ",\"signerSubject\":" << JsonEscape(signer)
-        << ",\"signingTime\":" << JsonEscape(signingTime);
+        << ",\"signingTime\":" << JsonEscape(signingTime)
+        << ",\"signatureTimeStampTime\":" << JsonEscape(signatureTimeStampTime);
     if (!ok) out << ",\"win32Error\":" << JsonEscape(LastErrorHex(apiError));
     out << '}'; return out.str();
 }
