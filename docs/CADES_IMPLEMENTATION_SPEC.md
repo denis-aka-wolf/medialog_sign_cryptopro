@@ -2,7 +2,7 @@
 
 > Статус: implementation specification, основана на официальной документации CryptoPro CAdES C API и опубликованных примерах. Перед компиляцией необходимо сверить все структуры и прототипы с локальными `docs/pki_sdk_docs/cades.chm` и `cades.h` именно из SDK 2.0.15273.
 >
-> Текущий Native Bridge реализует только CAdES-BES attached/detached. CAdES-T и CAdES-X Long Type 1 ещё не реализованы и не протестированы.
+> Статус: исходники Native Bridge теперь создают BES и повышают его до CAdES-T / CAdES-X Long Type 1 через `CadesEnhanceMessage`. Flutter Workbench передаёт выбранный профиль и необязательный TSP URL. Проверка принимает ожидаемый профиль. Компиляция MSVC x64 и криптографические acceptance-тесты на целевой Windows-машине ещё не выполнены.
 
 ## 1. Принятое техническое решение
 
@@ -73,7 +73,7 @@ CAdES-X Long Type 1 не следует называть CAdES-A. Для арх�
 
 ### 3.2 CADES_SERVICE_CONNECTION_PARA
 
-Официальный C++ пример enhancement инициализирует структуру так:
+Локальный заголовок SDK подтверждает `dwSize`, `wszUri`, `pAuthPara` и макро-расширение `DEFINE_ADES_STRUCT_MEMBERS`. Реализация заполняет `dwSize` и, если URL задан, `wszUri`. Официальный C++ пример enhancement инициализирует структуру так:
 
 ```cpp
 CADES_SERVICE_CONNECTION_PARA tsp = { sizeof(tsp) };
@@ -96,7 +96,7 @@ tsp.wszUri = SERVICE_URL_2012;
 - `dwMsgEncodingType = X509_ASN_ENCODING | PKCS_7_ASN_ENCODING`;
 - `pCadesSignPara` — указатель на подготовленную `CADES_SIGN_PARA`.
 
-Точный typedef и возможные дополнительные поля сверить с `cades.h` из локального SDK 2.0.15273.
+Проверено по `docs/pki_sdk_docs/SDK/include/cades.h`: typedef содержит `dwSize`, `dwMsgEncodingType`, `pCadesSignPara` и `DEFINE_ADES_STRUCT_MEMBERS`.
 
 ### 3.4 CADES_VERIFICATION_PARA
 
@@ -319,12 +319,26 @@ Bridge сам выполняет BES → enhancement → verification. Клие�
 - [CAdES-BES verification sample](https://docs.cryptopro.ru/cades/reference/cadesc/cadesc-samples/samplesimplifiedapiverifycadesbes)
 - [TSP/OCSP Client licensing](https://docs.cryptopro.ru/cades/usage/cadeslicense)
 
-## 11. Открытые пункты перед реализацией
+## 11. Статус реализации в исходниках
 
-- [ ] Сверить typedef `CADES_ENHANCE_MESSAGE_PARA` с локальным `cades.h`.
-- [ ] Сверить полный typedef `CADES_SERVICE_CONNECTION_PARA` и auth fields.
-- [ ] Сверить C API prototype для `CadesEnhanceMessage` и `CadesEnhanceMessageAll`.
-- [ ] Проверить enum constants из `cades.h` SDK 2.0.15273.
+В `native/src/main.cpp` реализовано:
+
+- создание базовой attached/detached CAdES-BES подписи через `CadesSignMessage`;
+- повышение выбранного signer до CAdES-T или CAdES-X Long Type 1 через `CadesEnhanceMessage`;
+- передача опционального TSP URL через `CADES_SERVICE_CONNECTION_PARA`; если URL не передан, SDK использует настроенную системную конфигурацию;
+- освобождение исходного и итогового blob через `CadesFreeBlob`;
+- выбор ожидаемого профиля при проверке и извлечение `pSignatureTimeStampTime`.
+
+В исходнике добавлены x64 `static_assert` для ABI размеров `CADES_SERVICE_CONNECTION_PARA`, `CADES_SIGN_PARA`, `CADES_ENHANCE_MESSAGE_PARA` и `CADES_VERIFICATION_PARA`. Они намеренно заставят сборку завершиться ошибкой, если compile-time макросы изменят layout структур.
+
+Это реализация в исходниках, не подтверждение успешной компиляции или криптографической корректности артефактов. Multi-signer, upgrade уже существующего файла подписи отдельной командой, полноценный VerificationReport, OCSP/proxy policy и серверный transport остаются следующими этапами.
+
+## 12. Открытые пункты перед production-проверкой
+
+- [x] Сверить typedef `CADES_ENHANCE_MESSAGE_PARA` с локальным `cades.h`.
+- [x] Сверить typedef `CADES_SERVICE_CONNECTION_PARA` и auth fields.
+- [x] Сверить C API prototype для `CadesEnhanceMessage` и `CadesEnhanceMessageAll`.
+- [x] Проверить enum constants из `cades.h` SDK 2.0.15273.
 - [ ] Проверить macro `CADES_PARA_HAS_EXTRA_FIELDS` и `CADES_SKIP_IE_PROXY_CONFIGURATION`.
 - [ ] Зафиксировать TSP/OCSP license prerequisites и тестовые endpoint.
 - [ ] Выполнить build и реальные тесты на Windows с CryptoPro CSP/CAdES runtime.
