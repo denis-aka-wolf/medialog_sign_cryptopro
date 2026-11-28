@@ -1,0 +1,32 @@
+name: Windows Native Bridge
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "native/**"
+      - "docs/pki_sdk_docs/SDK/include/**"
+      - "docs/pki_sdk_docs/SDK/lib/amd64/**"
+      - ".github/workflows/windows-native-build.yml"
+  pull_request:
+    paths:
+      - "native/**"
+      - "docs/pki_sdk_docs/SDK/include/**"
+      - "docs/pki_sdk_docs/SDK/lib/amd64/**"
+      - ".github/workflows/windows-native-build.yml"
+  workflow_dispatch:
+
+jobs:
+  build-x64:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Configure x64
+        run: >-
+          cmake -S native -B build/native -A x64
+          -DCRYPTOPRO_SDK_ROOT="${{ github.workspace }}/docs/pki_sdk_docs/SDK"
+
+      - name: Build Release
+        run: cmake --build build/native --config Release --parallel
