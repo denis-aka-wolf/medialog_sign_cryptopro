@@ -85,6 +85,23 @@ Response:
 
 Те же поля, `action` меняется на `sign-attached`. Подписанное сообщение содержит исходные данные. Поддерживаются те же профили и необязательный `tspUrl`.
 
+### `upgrade-signature`
+
+Повышает существующий CMS/CAdES файл без повторного использования закрытого ключа подписанта:
+
+```json
+{
+  "action":"upgrade-signature",
+  "inputPath":"C:\\CryptoProTest\\existing.p7s",
+  "outputPath":"C:\\CryptoProTest\\upgraded.p7s",
+  "profile":"CAdES-X Long Type 1",
+  "signerIndex":"0",
+  "tspUrl":"https://tsa.example.test"
+}
+```
+
+Поддерживаются только целевые профили CAdES-T и CAdES-X Long Type 1. `signerIndex` необязателен и по умолчанию равен `0`; операция повышает только выбранную подпись в CMS. `tspUrl` необязателен: без него используются настройки CryptoPro SDK.
+
 ### `verify-detached`
 
 ```json
@@ -130,7 +147,9 @@ Response:
 | `INPUT_FILE_READ_FAILED` | Ошибка чтения |
 | `FILE_TOO_LARGE` | Превышен лимит 4 GiB |
 | `CADES_SIGN_FAILED` | CAdES signing API завершился ошибкой |
-| `CADES_ENHANCE_FAILED` | Не удалось повысить BES до запрошенного профиля |
+| `CADES_ENHANCE_FAILED` | Не удалось повысить подпись до запрошенного профиля |
+| `INVALID_UPGRADE_PROFILE` | Upgrade не поддерживает BES как целевой профиль |
+| `INVALID_SIGNER_INDEX` | Некорректный signerIndex |
 | `UNSUPPORTED_CADES_PROFILE` | Запрошен неподдерживаемый профиль |
 | `INVALID_TSP_URL` | TSP URL не является HTTP(S) URL |
 | `EMPTY_SIGNATURE` | Файл подписи пуст |
