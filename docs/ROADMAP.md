@@ -26,6 +26,9 @@
 - [x] Перечисление `CurrentUser\\MY`.
 - [x] Сертификатный SHA-1 thumbprint lookup.
 - [x] CAdES-BES attached/detached sign calls.
+- [x] BES → CAdES-T / X Long Type 1 enhancement via `CadesEnhanceMessage`.
+- [x] Profile selection in Flutter Workbench and JSON protocol.
+- [x] Profile-aware attached/detached verification request and timestamp field extraction.
 - [x] Attached/detached verify calls.
 - [x] Освобождение CAdES blobs/verification info.
 - [x] CMake x64 project и PowerShell build/smoke scripts.
@@ -47,7 +50,7 @@
 - [x] Устранить конфликт старой документации C#/.NET COM и текущего C++ Native Bridge.
 - [x] Зафиксировать единый API с loopback и remote HTTPS endpoints.
 - [x] Добавить спецификацию pipeline BES → T/X Long Type 1.
-- [ ] Извлечь и зафиксировать ABI/typedef из локального `cades.h` 2.0.15273.
+- [x] Извлечь и зафиксировать ABI/typedef из локального `cades.h` 2.0.15273; добавить compile-time ABI guards.
 - [ ] Зафиксировать TSP/OCSP endpoints и лицензионную модель.
 
 ## Этап 1. Сборка и проверка CAdES-BES
@@ -64,15 +67,16 @@
 
 ## Этап 2. CAdES enhancement и профили T / X Long Type 1
 
-- [ ] Добавить C++ RAII wrapper для `CADES_SERVICE_CONNECTION_PARA`, `CADES_SIGN_PARA`, `CADES_ENHANCE_MESSAGE_PARA`.
-- [ ] Добавить `CadesEnhanceMessage` для выбранного signer.
+- [x] Реализовать enhancement выбранного signer через `CadesEnhanceMessage` (SDK blob lifecycle вручную контролируется).
+- [x] Реализовать BES → T.
+- [x] Реализовать BES → X Long Type 1.
+- [ ] Ввести общий RAII слой для всех SDK-owned ресурсов.
 - [ ] Добавить `CadesEnhanceMessageAll` только при подтверждённом сценарии multi-signer.
-- [ ] Реализовать BES → T.
-- [ ] Реализовать BES → X Long Type 1.
 - [ ] Реализовать upgrade существующего T → X Long Type 1.
 - [ ] Добавить явные TSP/OCSP/proxy параметры и серверную конфигурацию.
 - [ ] Проверить лицензии TSP Client / OCSP Client.
-- [ ] Добавить profile-aware verification и VerificationReport.
+- [x] Добавить выбор ожидаемого профиля в verification API и извлечение signature timestamp.
+- [ ] Расширить результат до полноценного VerificationReport с независимыми chain/revocation/policy decisions.
 - [ ] Проверить attached/detached и независимый валидатор.
 
 **Выход:** все три профиля реально создаются и проходят проверку.
