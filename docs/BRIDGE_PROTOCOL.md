@@ -73,15 +73,17 @@ Response:
   "action":"sign-detached",
   "inputPath":"C:\\CryptoProTest\\document.pdf",
   "outputPath":"C:\\CryptoProTest\\document.pdf.p7s",
-  "thumbprint":"SHA1_HEX"
+  "thumbprint":"SHA1_HEX",
+  "profile":"CAdES-T",
+  "tspUrl":"https://tsa.example.test"
 }
 ```
 
-Результат data: `outputPath`, `signatureFormat` (`CAdES-BES`), `detached`, `bytesWritten`.
+Поле `profile` необязательно: `CAdES-BES` (по умолчанию), `CAdES-T` или `CAdES-X Long Type 1`. Для T/X Long Type 1 Bridge сначала создаёт BES, затем вызывает `CadesEnhanceMessage` для повышения профиля. Необязательное поле `tspUrl` задаёт TSP endpoint; если оно отсутствует, используются настройки CryptoPro SDK. Результат data: `outputPath`, `signatureFormat`, `requestedProfile`, `detached`, `bytesWritten`.
 
 ### `sign-attached`
 
-Те же поля, `action` меняется на `sign-attached`. Подписанное сообщение содержит исходные данные.
+Те же поля, `action` меняется на `sign-attached`. Подписанное сообщение содержит исходные данные. Поддерживаются те же профили и необязательный `tspUrl`.
 
 ### `verify-detached`
 
@@ -89,11 +91,12 @@ Response:
 {
   "action":"verify-detached",
   "inputPath":"C:\\CryptoProTest\\document.pdf",
-  "signaturePath":"C:\\CryptoProTest\\document.pdf.p7s"
+  "signaturePath":"C:\\CryptoProTest\\document.pdf.p7s",
+  "profile":"CAdES-T"
 }
 ```
 
-Результат data: `valid`, `apiSucceeded`, `statusCode`, `status`, `signerSubject`, `signingTime`, а при API error — `win32Error`.
+Поле `profile` необязательно и задаёт ожидаемый профиль (по умолчанию BES). Результат data: `valid`, `apiSucceeded`, `requestedProfile`, `statusCode`, `status`, `signerSubject`, `signingTime`, `signatureTimeStampTime`, а при API error — `win32Error`.
 
 ### `verify-attached`
 
