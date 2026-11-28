@@ -174,6 +174,16 @@ class _WorkbenchPageState extends State<WorkbenchPage> {
         _append('Ответ verify-detached:\n${result.toString()}');
       });
 
+  Future<void> _verifyUpgradedSignature() =>
+      _run('Проверка повышенной detached-подписи', () async {
+        final result = await _bridge.verifyDetached(
+          inputPath: _inputPath.text.trim(),
+          signaturePath: _upgradedPath.text.trim(),
+          profile: _selectedProfile,
+        );
+        _append('Ответ verify-upgraded-signature:\n${result.toString()}');
+      });
+
   Future<void> _createTestFile() => _run('Создание тестового файла', () async {
         final file = File(_inputPath.text.trim());
         await file.parent.create(recursive: true);
@@ -346,6 +356,8 @@ class _WorkbenchPageState extends State<WorkbenchPage> {
                       _signAttached),
                   _actionButton('Повысить существующую подпись', Icons.upgrade,
                       _upgradeSignature),
+                  _actionButton('Проверить повышенную подпись', Icons.fact_check,
+                      _verifyUpgradedSignature),
                   _actionButton('Проверить detached', Icons.fact_check,
                       _verifyDetached),
                   _actionButton('Изменить исходник', Icons.edit,
