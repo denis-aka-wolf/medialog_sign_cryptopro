@@ -70,9 +70,10 @@
 - [x] Реализовать enhancement выбранного signer через `CadesEnhanceMessage` (SDK blob lifecycle вручную контролируется).
 - [x] Реализовать BES → T.
 - [x] Реализовать BES → X Long Type 1.
+- [x] Добавить отдельную операцию upgrade существующего CMS для выбранного signer (T/X Long Type 1).
 - [ ] Ввести общий RAII слой для всех SDK-owned ресурсов.
 - [ ] Добавить `CadesEnhanceMessageAll` только при подтверждённом сценарии multi-signer.
-- [ ] Реализовать upgrade существующего T → X Long Type 1.
+- [x] Реализовать upgrade существующей подписи до T/X Long Type 1 через отдельную операцию.
 - [ ] Добавить явные TSP/OCSP/proxy параметры и серверную конфигурацию.
 - [ ] Проверить лицензии TSP Client / OCSP Client.
 - [x] Добавить выбор ожидаемого профиля в verification API и извлечение signature timestamp.
