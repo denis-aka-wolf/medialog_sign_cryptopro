@@ -399,14 +399,18 @@ static std::string UpgradeSignature(const std::map<std::string, std::string>& re
     DWORD signerIndex = 0;
     const std::string signerIndexText = get("signerIndex");
     if (!signerIndexText.empty()) {
+        const bool digitsOnly = std::all_of(signerIndexText.begin(), signerIndexText.end(),
+            [](unsigned char ch) { return ch >= '0' && ch <= '9'; });
+        if (!digitsOnly)
+            throw BridgeError("INVALID_SIGNER_INDEX", "signerIndex должен быть целым неотрицательным числом.");
         try {
             size_t parsed = 0;
-            const unsigned long value = std::stoul(signerIndexText, &parsed, 10);
-            if (parsed != signerIndexText.size() || value > 0xFFFFFFFFul)
-                throw std::invalid_argument("signerIndex");
+            const unsigned long long value = std::stoull(signerIndexText, &parsed, 10);
+            if (parsed != signerIndexText.size() || value > 0xFFFFFFFFull)
+                throw std::out_of_range("signerIndex");
             signerIndex = static_cast<DWORD>(value);
         } catch (...) {
-            throw BridgeError("INVALID_SIGNER_INDEX", "signerIndex должен быть целым неотрицательным числом.");
+            throw BridgeError("INVALID_SIGNER_INDEX", "signerIndex должен быть целым неотрицательным числом в диапазоне DWORD.");
         }
     }
 
