@@ -542,18 +542,25 @@ static std::string Dispatch(const std::map<std::string, std::string>& req, std::
 
 int main() {
     SetConsoleOutputCP(CP_UTF8); SetConsoleCP(CP_UTF8);
+    constexpr size_t kMaxRequestBytes = 1024 * 1024;
     std::string line;
-    if (!std::getline(std::cin, line)) return 2;
+    line.reserve(4096);
+    char ch = 0;
+    while (std::cin.get(ch)) {
+        if (ch == '\\n') break;
+        if (line.size() >= kMaxRequestBytes) {
+            std::cout << "{\"ok\":false,\"action\":\"unknown\",\"error\":{\"code\":\"REQUEST_TOO_LARGE\",\"message\":\"JSON request exceeds 1 MiB.\"}}" << std::endl;
+            return 1;
+        }
+        if (ch != '\\r') line.push_back(ch);
+    }
+    if (!std::cin && line.empty()) return 2;
     std::string trailingLine;
     if (std::getline(std::cin, trailingLine)) {
         std::cout << "{\"ok\":false,\"action\":\"unknown\",\"error\":{\"code\":\"INVALID_JSON\",\"message\":\"Only one JSON line is accepted per process.\"}}" << std::endl;
         return 1;
     }
     std::string action = "unknown";
-    if (line.size() > 1024 * 1024) {
-        std::cout << "{\"ok\":false,\"action\":\"unknown\",\"error\":{\"code\":\"REQUEST_TOO_LARGE\",\"message\":\"JSON request exceeds 1 MiB.\"}}" << std::endl;
-        return 1;
-    }
     try {
         auto req = FlatJsonParser(line).Parse();
         std::string data = Dispatch(req, action);
