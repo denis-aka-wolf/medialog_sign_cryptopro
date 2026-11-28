@@ -25,6 +25,12 @@
 
 namespace fs = std::filesystem;
 
+static_assert(sizeof(void*) == 8, "CryptoPro Native Bridge requires x64.");
+static_assert(sizeof(CADES_SERVICE_CONNECTION_PARA) == 24, "Unexpected CryptoPro SDK ABI: CADES_SERVICE_CONNECTION_PARA.");
+static_assert(sizeof(CADES_SIGN_PARA) == 56, "Unexpected CryptoPro SDK ABI: CADES_SIGN_PARA. Check CADES_PARA_HAS_EXTRA_FIELDS.");
+static_assert(sizeof(CADES_ENHANCE_MESSAGE_PARA) == 16, "Unexpected CryptoPro SDK ABI: CADES_ENHANCE_MESSAGE_PARA.");
+static_assert(sizeof(CADES_VERIFICATION_PARA) == 48, "Unexpected CryptoPro SDK ABI: CADES_VERIFICATION_PARA. Check CADES_PARA_HAS_EXTRA_FIELDS.");
+
 struct BridgeError : std::runtime_error {
     std::string code;
     BridgeError(std::string c, std::string m) : std::runtime_error(std::move(m)), code(std::move(c)) {}
@@ -287,6 +293,7 @@ static std::string Sign(const std::map<std::string, std::string>& req, bool deta
     if (SamePath(inputPath, outputPath)) throw BridgeError("INPUT_OUTPUT_PATH_COLLISION", "Входной и выходной пути не должны совпадать.");
     if (!tspUrl.empty() && tspUrl.rfind("http://", 0) != 0 && tspUrl.rfind("https://", 0) != 0)
         throw BridgeError("INVALID_TSP_URL", "tspUrl должен начинаться с http:// или https://.");
+    const std::wstring tspUri = Utf8ToWide(tspUrl);
 
     auto content = ReadFile(inputPath);
     HCERTSTORE store = OpenMyStore();
@@ -326,7 +333,6 @@ static std::string Sign(const std::map<std::string, std::string>& req, bool deta
     }
 
     if (targetProfile != CADES_BES) {
-        std::wstring tspUri = Utf8ToWide(tspUrl);
         CADES_SERVICE_CONNECTION_PARA tsp{}; tsp.dwSize = sizeof(tsp);
         if (!tspUri.empty()) tsp.wszUri = tspUri.c_str();
 
