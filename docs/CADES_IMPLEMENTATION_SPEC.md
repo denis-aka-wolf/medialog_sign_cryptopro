@@ -1,6 +1,6 @@
 # Техническая спецификация реализации CAdES на CryptoPro C API
 
-> Статус: implementation specification, основана на официальной документации CryptoPro CAdES C API и опубликованных примерах. Перед компиляцией необходимо сверить все структуры и прототипы с локальными `docs/pki_sdk_docs/cades.chm` и `cades.h` именно из SDK 2.0.15273.
+> Статус: implementation specification, основана на официальной документации CryptoPro CAdES C API и опубликованных примерах. Основные typedef, enum и прототипы enhancement сверены с локальными `docs/pki_sdk_docs/SDK/include/cades.h` SDK 2.0.15273; compile-time ABI guards добавлены в Native Bridge.
 >
 > Статус: исходники Native Bridge теперь создают BES и повышают его до CAdES-T / CAdES-X Long Type 1 через `CadesEnhanceMessage`. Flutter Workbench передаёт выбранный профиль и необязательный TSP URL. Проверка принимает ожидаемый профиль. Компиляция MSVC x64 и криптографические acceptance-тесты на целевой Windows-машине ещё не выполнены.
 
@@ -331,7 +331,7 @@ Bridge сам выполняет BES → enhancement → verification. Клие�
 
 В исходнике добавлены x64 `static_assert` для ABI размеров `CADES_SERVICE_CONNECTION_PARA`, `CADES_SIGN_PARA`, `CADES_ENHANCE_MESSAGE_PARA` и `CADES_VERIFICATION_PARA`. Они намеренно заставят сборку завершиться ошибкой, если compile-time макросы изменят layout структур.
 
-Это реализация в исходниках, не подтверждение успешной компиляции или криптографической корректности артефактов. Multi-signer, upgrade уже существующего файла подписи отдельной командой, полноценный VerificationReport, OCSP/proxy policy и серверный transport остаются следующими этапами.
+Это реализация в исходниках, не подтверждение успешной компиляции или криптографической корректности артефактов. Multi-signer, полноценный VerificationReport, OCSP/proxy policy и серверный transport остаются следующими этапами.
 
 ## 12. Открытые пункты перед production-проверкой
 
@@ -343,4 +343,4 @@ Bridge сам выполняет BES → enhancement → verification. Клие�
 - [ ] Зафиксировать TSP/OCSP license prerequisites и тестовые endpoint.
 - [ ] Выполнить build и реальные тесты на Windows с CryptoPro CSP/CAdES runtime.
 
-До закрытия этих пунктов спецификация определяет архитектуру и pipeline, но не считается подтверждением бинарной ABI-совместимости каждого поля для конкретной поставки.
+До успешной сборки MSVC x64 и криптографических тестов на целевой Windows-машине реализация остаётся неподтверждённой в runtime, даже при сверенном ABI заголовков.
